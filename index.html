@@ -2,12 +2,13 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <title>WoW: Forever - Shadow Priest Gear Planner</title>
+  <title>WoW: Forever - Shadow Priest Upgrade Finder</title>
   <style>
     :root {
-      --bg: #0c0b10;
+      --bg: #0b0c10;
       --panel: #16151f;
       --card: #1f1d2b;
+      --card-highlight: #28243d;
       --accent: #8b5cf6;
       --accent-hover: #7c3aed;
       --text: #e2e8f0;
@@ -15,7 +16,9 @@
       --border: #2e2b42;
       --success: #4ade80;
       --warning: #fbbf24;
+      --gold: #f59e0b;
     }
+    * { box-sizing: border-box; }
     body {
       background-color: var(--bg);
       color: var(--text);
@@ -23,7 +26,7 @@
       margin: 0;
       padding: 24px;
     }
-    .container { max-width: 1100px; margin: 0 auto; }
+    .container { max-width: 1200px; margin: 0 auto; }
     header { border-bottom: 2px solid var(--border); padding-bottom: 16px; margin-bottom: 20px; }
     h1 { margin: 0 0 6px 0; color: var(--accent); }
     .subtitle { color: var(--muted); margin: 0 0 16px 0; font-size: 0.95rem; }
@@ -49,9 +52,11 @@
       align-items: center;
       padding: 10px 0;
       border-bottom: 1px solid var(--border);
+      gap: 10px;
     }
-    .slot-info { display: flex; align-items: center; gap: 10px; }
-    .slot-name { font-weight: bold; color: #a78bfa; width: 85px; }
+    .slot-info { display: flex; align-items: center; gap: 10px; flex: 1; min-width: 0; }
+    .slot-name { font-weight: bold; color: #a78bfa; width: 85px; flex-shrink: 0; }
+    .item-display { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
     .empty { color: var(--muted); font-style: italic; }
     .ep-tag {
       background: #312e81;
@@ -59,21 +64,39 @@
       font-size: 0.75rem;
       padding: 2px 6px;
       border-radius: 4px;
+      margin-left: 6px;
     }
+    .slot-actions { display: flex; gap: 6px; flex-shrink: 0; }
     .card {
       background: var(--card);
       border: 1px solid var(--border);
       padding: 12px;
       border-radius: 6px;
       margin-bottom: 10px;
+    }
+    .card-immediate {
+      background: var(--card-highlight);
+      border: 2px solid var(--accent);
+    }
+    .card-header {
       display: flex;
       justify-content: space-between;
       align-items: center;
+      margin-bottom: 4px;
     }
-    .card-title { font-weight: bold; color: #c4b5fd; margin-bottom: 4px; }
+    .card-badge {
+      font-size: 0.75rem;
+      background: var(--accent);
+      color: #fff;
+      padding: 2px 8px;
+      border-radius: 4px;
+      font-weight: bold;
+    }
+    .card-title { font-weight: bold; color: #c4b5fd; }
     .source-text { font-size: 0.8rem; color: var(--muted); }
-    .ep-text { font-size: 0.85rem; margin-top: 4px; }
+    .ep-text { font-size: 0.85rem; margin-top: 6px; }
     .delta-plus { color: var(--success); font-weight: bold; }
+    
     button {
       background: var(--accent);
       border: none;
@@ -84,8 +107,72 @@
       cursor: pointer;
     }
     button:hover { background: var(--accent-hover); }
+    button.btn-secondary {
+      background: #334155;
+    }
+    button.btn-secondary:hover {
+      background: #475569;
+    }
     a { color: #c4b5fd; text-decoration: none; font-weight: 500; }
     a:hover { text-decoration: underline; }
+
+    /* Modal Styles */
+    .modal-overlay {
+      position: fixed;
+      top: 0; left: 0; right: 0; bottom: 0;
+      background: rgba(0,0,0,0.75);
+      display: none;
+      justify-content: center;
+      align-items: center;
+      z-index: 1000;
+    }
+    .modal {
+      background: var(--panel);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      width: 90%;
+      max-width: 600px;
+      max-height: 80vh;
+      display: flex;
+      flex-direction: column;
+      padding: 20px;
+    }
+    .modal-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 12px;
+    }
+    .modal-header h3 { margin: 0; color: var(--accent); }
+    .search-input {
+      width: 100%;
+      padding: 10px 14px;
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      color: var(--text);
+      font-size: 1rem;
+      margin-bottom: 12px;
+    }
+    .search-input:focus { outline: none; border-color: var(--accent); }
+    .modal-list {
+      overflow-y: auto;
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+    .modal-item-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      background: var(--card);
+      padding: 10px;
+      border-radius: 6px;
+      border: 1px solid var(--border);
+    }
+    .modal-item-info { font-size: 0.9rem; }
+    .modal-item-sub { font-size: 0.75rem; color: var(--muted); }
   </style>
   <script>const whTooltips = { colorLinks: true, iconizeLinks: true, renameLinks: true };</script>
   <script src="https://wow.zamimg.com/js/tooltips.js"></script>
@@ -94,150 +181,73 @@
   <div class="container">
     <header>
       <h1>Shadow Priest Gear Optimizer</h1>
-      <p class="subtitle">WoW Forever Edition (12% Gear Hit Target + Shadowform DoT Crit Scaling)</p>
+      <p class="subtitle">WoW Forever Edition • Search items across levels 1–60 • Instant Closest Upgrade Finder</p>
       <div id="stat-summary" class="summary-bar"></div>
     </header>
 
     <div class="layout">
+      <!-- Equipped Gear Panel -->
       <section class="panel">
         <h2>Equipped Loadout</h2>
         <div id="equipment-slots"></div>
       </section>
 
+      <!-- Upgrades Inspection Panel -->
       <section class="panel">
-        <h2 id="upgrades-title">Next Upgrades</h2>
+        <h2 id="upgrades-title">Upgrade Advisor</h2>
         <div id="upgrade-results">
-          <p style="color: var(--muted);">Click any slot on the left to see calculated upgrades.</p>
+          <p style="color: var(--muted);">Select or change any slot on the left to see your next closest upgrade.</p>
         </div>
       </section>
     </div>
   </div>
 
-  <script>
-    const SLOTS = ["Head", "Neck", "Shoulder", "Chest", "Waist", "Legs", "Feet", "Wrist", "Hands", "Ring1", "Ring2", "Trinket1", "Trinket2", "MainHand", "OffHand", "Wand"];
-    const GEAR_HIT_CAP = 12;
+  <!-- Item Search Modal -->
+  <div id="search-modal" class="modal-overlay">
+    <div class="modal">
+      <div class="modal-header">
+        <h3 id="modal-title">Select Item</h3>
+        <button onclick="closeModal()" class="btn-secondary">✕</button>
+      </div>
+      <input type="text" id="modal-search-box" class="search-input" placeholder="Type to search items by name or source..." oninput="filterModalItems()">
+      <div id="modal-item-list" class="modal-list"></div>
+    </div>
+  </div>
 
-    const ITEMS = [
-      { id: 14111, name: "Felcloth Hood", slot: "Head", ilvl: 62, source: "Tailoring", stats: { sp: 30, hit: 0, crit: 0 } },
-      { id: 16923, name: "Halo of Transcendence", slot: "Head", ilvl: 76, source: "Onyxia", stats: { sp: 32, hit: 0, crit: 1 } },
-      { id: 19375, name: "Mish'undare, Circlet of the Mind Flayer", slot: "Head", ilvl: 83, source: "BWL - Nefarian", stats: { sp: 35, hit: 0, crit: 2 } },
-      { id: 19400, name: "Band of Forced Concentration", slot: "Ring", ilvl: 75, source: "BWL - Ebonroc", stats: { sp: 21, hit: 1, crit: 0 } },
-      { id: 19147, name: "Ring of Spell Power", slot: "Ring", ilvl: 66, source: "Molten Core", stats: { sp: 33, hit: 0, crit: 0 } },
-      { id: 19382, name: "Pure Elementium Band", slot: "Ring", ilvl: 83, source: "BWL - Nefarian", stats: { sp: 0, hit: 0, crit: 0 } },
-      { id: 19379, name: "Neltharion's Tear", slot: "Trinket", ilvl: 83, source: "BWL - Nefarian", stats: { sp: 44, hit: 2, crit: 0 } },
-      { id: 12930, name: "Briarwood Reed", slot: "Trinket", ilvl: 60, source: "UBRS - Jed Runewatcher", stats: { sp: 29, hit: 0, crit: 0 } },
-      { id: 19355, name: "Shadow Flame", slot: "MainHand", ilvl: 83, source: "BWL - Nefarian", stats: { sp: 84, hit: 0, crit: 2 } },
-      { id: 18842, name: "Staff of Dominance", slot: "MainHand", ilvl: 66, source: "Molten Core - Golemagg", stats: { sp: 40, hit: 0, crit: 1 } }
+  <script>
+    const SLOTS = [
+      "Head", "Neck", "Shoulder", "Chest", "Waist", "Legs", 
+      "Feet", "Wrist", "Hands", "Ring1", "Ring2", "Trinket1", "Trinket2", 
+      "MainHand", "OffHand", "Wand"
     ];
 
-    let equipped = JSON.parse(localStorage.getItem("spriest_gear")) || {
-      "Head": 14111,
-      "Ring1": 19147,
-      "Trinket1": 12930,
-      "MainHand": 18842
-    };
+    const GEAR_HIT_CAP = 12;
 
-    function computeStats() {
-      let sp = 0, hit = 0, crit = 0;
-      Object.values(equipped).forEach(id => {
-        const item = ITEMS.find(i => i.id === id);
-        if (item) {
-          sp += item.stats.sp || 0;
-          hit += item.stats.hit || 0;
-          crit += item.stats.crit || 0;
-        }
-      });
-      return { sp, hit, crit };
-    }
+    // Level 1-60 Shadow Priest Database
+    const ITEMS = [
+      // HEAD
+      { id: 10588, name: "Shadow Goggles", slot: "Head", reqLvl: 27, ilvl: 32, source: "Engineering (215)", stats: { sp: 0, hit: 0, crit: 0, int: 5, spi: 6 } },
+      { id: 7720,  name: "Whitemane's Chapeau", slot: "Head", reqLvl: 35, ilvl: 40, source: "Scarlet Monastery (Mograine)", stats: { sp: 0, hit: 0, crit: 0, int: 14, spi: 14 } },
+      { id: 10041, name: "Dreamweave Circlet", slot: "Head", reqLvl: 45, ilvl: 50, source: "Tailoring (250)", stats: { sp: 21, hit: 0, crit: 0, int: 10, spi: 12 } },
+      { id: 14111, name: "Felcloth Hood", slot: "Head", reqLvl: 57, ilvl: 62, source: "Tailoring (300)", stats: { sp: 30, hit: 0, crit: 0, int: 0, spi: 0 } },
+      { id: 16923, name: "Halo of Transcendence", slot: "Head", reqLvl: 60, ilvl: 76, source: "Onyxia", stats: { sp: 32, hit: 0, crit: 1, int: 27, spi: 16 } },
+      { id: 19375, name: "Mish'undare, Circlet of the Mind Flayer", slot: "Head", reqLvl: 60, ilvl: 83, source: "BWL - Nefarian", stats: { sp: 35, hit: 0, crit: 2, int: 24, spi: 9 } },
 
-    function calculateEP(item, currentTotalHit, equippedItemHit = 0) {
-      if (!item) return 0;
-      const otherHit = currentTotalHit - equippedItemHit;
-      const effectiveHit = Math.max(0, Math.min(item.stats.hit || 0, GEAR_HIT_CAP - otherHit));
-      return (item.stats.sp * 1.0) + (effectiveHit * 1.15) + ((item.stats.crit || 0) * 0.85);
-    }
+      // NECK
+      { id: 5003,  name: "River Pride Choker", slot: "Neck", reqLvl: 17, ilvl: 22, source: "Wailing Caverns", stats: { sp: 0, hit: 0, crit: 0, int: 2, spi: 4 } },
+      { id: 7686,  name: "Black Pearl Ring / Choker", slot: "Neck", reqLvl: 28, ilvl: 33, source: "Jewelcrafting / World Drop", stats: { sp: 0, hit: 0, crit: 0, int: 5, spi: 5 } },
+      { id: 11943, name: "Ghostshroud", slot: "Neck", reqLvl: 48, ilvl: 53, source: "Blackrock Depths", stats: { sp: 0, hit: 0, crit: 0, int: 11, spi: 11 } },
+      { id: 12103, name: "Star of Mystaria", slot: "Neck", reqLvl: 58, ilvl: 63, source: "Stratholme (Balnazzar)", stats: { sp: 9, hit: 1, crit: 0, int: 9, spi: 0 } },
+      { id: 18814, name: "Choker of the Fire Lord", slot: "Neck", reqLvl: 60, ilvl: 77, source: "Molten Core - Ragnaros", stats: { sp: 34, hit: 0, crit: 0, int: 7, spi: 0 } },
 
-    function render() {
-      const stats = computeStats();
-      const hitColor = stats.hit >= GEAR_HIT_CAP ? "var(--success)" : "var(--warning)";
-      document.getElementById("stat-summary").innerHTML = `
-        <div class="badge">Spell Power: <strong>+${stats.sp}</strong></div>
-        <div class="badge" style="color: ${hitColor}">Hit: <strong>${stats.hit}% / ${GEAR_HIT_CAP}%</strong> ${stats.hit >= GEAR_HIT_CAP ? '(Capped)' : `(Need +${GEAR_HIT_CAP - stats.hit}%)`}</div>
-        <div class="badge">Crit: <strong>+${stats.crit}%</strong></div>
-      `;
+      // SHOULDERS
+      { id: 5195,  name: "Gold-flecked Gloves / Mantle", slot: "Shoulder", reqLvl: 14, ilvl: 19, source: "Deadmines", stats: { sp: 0, hit: 0, crit: 0, int: 4, spi: 3 } },
+      { id: 10042, name: "Dreamweave Mantle", slot: "Shoulder", reqLvl: 40, ilvl: 45, source: "Tailoring (225)", stats: { sp: 18, hit: 0, crit: 0, int: 10, spi: 0 } },
+      { id: 14112, name: "Felcloth Shoulders", slot: "Shoulder", reqLvl: 56, ilvl: 61, source: "Tailoring (300)", stats: { sp: 26, hit: 0, crit: 0, int: 0, spi: 0 } },
+      { id: 19370, name: "Mantle of the Blackwing Cabal", slot: "Shoulder", reqLvl: 60, ilvl: 77, source: "BWL - Razorgore", stats: { sp: 34, hit: 0, crit: 0, int: 16, spi: 0 } },
 
-      const container = document.getElementById("equipment-slots");
-      container.innerHTML = "";
-      SLOTS.forEach(slot => {
-        const baseSlot = slot.replace(/[0-9]/g, "");
-        const itemId = equipped[slot];
-        const item = ITEMS.find(i => i.id === itemId);
-        const ep = item ? calculateEP(item, stats.hit, item.stats.hit || 0).toFixed(1) : 0;
-
-        const row = document.createElement("div");
-        row.className = "slot-row";
-        row.innerHTML = `
-          <div class="slot-info">
-            <span class="slot-name">${slot}</span>
-            ${item ? `<a href="https://www.wowhead.com/classic/item=${item.id}" data-wowhead="item=${item.id}">${item.name}</a> <span class="ep-tag">${ep} EP</span>` : `<span class="empty">Empty</span>`}
-          </div>
-          <button onclick="inspect('${slot}', '${baseSlot}')">Compare</button>
-        `;
-        container.appendChild(row);
-      });
-
-      if (window.$WowheadPower) window.$WowheadPower.refreshLinks();
-    }
-
-    function inspect(slot, baseSlot) {
-      const stats = computeStats();
-      const currentItem = ITEMS.find(i => i.id === equipped[slot]);
-      const currentItemHit = currentItem ? (currentItem.stats.hit || 0) : 0;
-      const currentEP = currentItem ? calculateEP(currentItem, stats.hit, currentItemHit) : 0;
-
-      document.getElementById("upgrades-title").innerText = `Upgrades for ${slot}`;
-      const list = document.getElementById("upgrade-results");
-      list.innerHTML = "";
-
-      const upgrades = ITEMS
-        .filter(i => i.slot === baseSlot && i.id !== (currentItem ? currentItem.id : null))
-        .map(i => {
-          const ep = calculateEP(i, stats.hit, currentItemHit);
-          return { ...i, ep, delta: ep - currentEP };
-        })
-        .filter(i => i.delta > 0)
-        .sort((a, b) => b.delta - a.delta);
-
-      if (upgrades.length === 0) {
-        list.innerHTML = `<p style="color: var(--muted);">No higher EP upgrades found in database for this slot.</p>`;
-        return;
-      }
-
-      upgrades.forEach(u => {
-        const card = document.createElement("div");
-        card.className = "card";
-        card.innerHTML = `
-          <div>
-            <div class="card-title"><a href="https://www.wowhead.com/classic/item=${u.id}" data-wowhead="item=${u.id}">${u.name}</a></div>
-            <div class="source-text">${u.source} (iLvl ${u.ilvl})</div>
-            <div class="ep-text">Score: ${u.ep.toFixed(1)} EP <span class="delta-plus">(+${u.delta.toFixed(1)} EP)</span></div>
-          </div>
-          <button onclick="equip('${slot}', ${u.id})">Equip</button>
-        `;
-        list.appendChild(card);
-      });
-
-      if (window.$WowheadPower) window.$WowheadPower.refreshLinks();
-    }
-
-    function equip(slot, id) {
-      equipped[slot] = id;
-      localStorage.setItem("spriest_gear", JSON.stringify(equipped));
-      render();
-      inspect(slot, slot.replace(/[0-9]/g, ""));
-    }
-
-    render();
-  </script>
-</body>
-</html>
+      // CHEST
+      { id: 2041,  name: "Tunic of Westfall", slot: "Chest", reqLvl: 14, ilvl: 19, source: "Quest - The Defias Brotherhood", stats: { sp: 0, hit: 0, crit: 0, int: 5, spi: 5 } },
+      { id: 6341,  name: "Robes of Arugal", slot: "Chest", reqLvl: 24, ilvl: 29, source: "Shadowfang Keep (Arugal)", stats: { sp: 0, hit: 0, crit: 0, int: 10, spi: 9 } },
+      { id: 10044, name: "Dreamweave Vest", slot: "Chest", reqLvl: 40, ilvl: 45, source: "Tailoring (225)", stats: { sp: 18, hit: 0, crit: 0, int: 9, spi: 14 } },
+      { id: 14136, name: "Robe of Winter Night", slot: "Chest", reqLvl: 52, ilvl: 57, source: "Tailoring (285)", stats: { sp: 27, hit: 0, crit: 1, int: 12, spi: 0 }
