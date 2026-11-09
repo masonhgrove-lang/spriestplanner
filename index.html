@@ -2,13 +2,13 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <title>WoW: Forever - Shadow Priest Upgrade Finder</title>
+  <title>WoW: Forever - Shadow Priest Gear & Upgrade Advisor</title>
   <style>
     :root {
       --bg: #0b0c10;
       --panel: #16151f;
       --card: #1f1d2b;
-      --card-highlight: #28243d;
+      --card-highlight: #241e38;
       --accent: #8b5cf6;
       --accent-hover: #7c3aed;
       --text: #e2e8f0;
@@ -26,11 +26,11 @@
       margin: 0;
       padding: 24px;
     }
-    .container { max-width: 1200px; margin: 0 auto; }
+    .container { max-width: 1250px; margin: 0 auto; }
     header { border-bottom: 2px solid var(--border); padding-bottom: 16px; margin-bottom: 20px; }
     h1 { margin: 0 0 6px 0; color: var(--accent); }
     .subtitle { color: var(--muted); margin: 0 0 16px 0; font-size: 0.95rem; }
-    .summary-bar { display: flex; gap: 12px; flex-wrap: wrap; }
+    .summary-bar { display: flex; gap: 12px; flex-wrap: wrap; margin-bottom: 8px; }
     .badge {
       background: var(--panel);
       padding: 8px 14px;
@@ -38,85 +38,183 @@
       border: 1px solid var(--border);
       font-size: 0.9rem;
     }
-    .layout { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+
+    /* Quick Search Top Bar */
+    .quick-search-box {
+      margin-top: 14px;
+      position: relative;
+    }
+    .quick-search-input {
+      width: 100%;
+      padding: 10px 14px;
+      background: var(--card);
+      border: 1px solid var(--accent);
+      border-radius: 6px;
+      color: var(--text);
+      font-size: 0.95rem;
+    }
+    .quick-search-input:focus { outline: none; box-shadow: 0 0 8px rgba(139, 92, 246, 0.5); }
+    .search-results-dropdown {
+      position: absolute;
+      top: 100%;
+      left: 0;
+      right: 0;
+      background: var(--panel);
+      border: 1px solid var(--accent);
+      border-radius: 0 0 6px 6px;
+      max-height: 250px;
+      overflow-y: auto;
+      z-index: 100;
+      display: none;
+    }
+    .search-result-row {
+      padding: 8px 14px;
+      cursor: pointer;
+      display: flex;
+      justify-content: space-between;
+      border-bottom: 1px solid var(--border);
+    }
+    .search-result-row:hover { background: var(--card); }
+
+    /* Main Grid */
+    .layout { display: grid; grid-template-columns: 1.1fr 0.9fr; gap: 24px; margin-top: 20px; }
     .panel {
       background: var(--panel);
       border: 1px solid var(--border);
       border-radius: 8px;
-      padding: 18px;
+      padding: 20px;
     }
-    .panel h2 { margin-top: 0; font-size: 1.2rem; border-bottom: 1px solid var(--border); padding-bottom: 8px; }
-    .slot-row {
+    .panel-header {
       display: flex;
       justify-content: space-between;
       align-items: center;
-      padding: 10px 0;
       border-bottom: 1px solid var(--border);
-      gap: 10px;
+      padding-bottom: 10px;
+      margin-bottom: 14px;
     }
-    .slot-info { display: flex; align-items: center; gap: 10px; flex: 1; min-width: 0; }
-    .slot-name { font-weight: bold; color: #a78bfa; width: 85px; flex-shrink: 0; }
-    .item-display { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-    .empty { color: var(--muted); font-style: italic; }
+    .panel-header h2 { margin: 0; font-size: 1.25rem; }
+
+    /* Slot Card Styles */
+    .slot-card {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      padding: 10px 14px;
+      margin-bottom: 10px;
+      transition: border-color 0.15s ease;
+    }
+    .slot-card.active-slot {
+      border-color: var(--accent);
+      background: var(--card-highlight);
+    }
+    .slot-card-top {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 6px;
+    }
+    .slot-badge-name {
+      font-weight: 700;
+      color: #c4b5fd;
+      font-size: 0.85rem;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+    .equipped-details {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      font-size: 0.95rem;
+    }
     .ep-tag {
       background: #312e81;
       color: #c7d2fe;
       font-size: 0.75rem;
       padding: 2px 6px;
       border-radius: 4px;
-      margin-left: 6px;
     }
-    .slot-actions { display: flex; gap: 6px; flex-shrink: 0; }
-    .card {
-      background: var(--card);
+    .btn-clear {
+      background: transparent;
+      border: 1px solid #475569;
+      color: var(--muted);
+      font-size: 0.75rem;
+      padding: 2px 6px;
+      border-radius: 4px;
+      cursor: pointer;
+    }
+    .btn-clear:hover { background: #ef4444; color: white; border-color: #ef4444; }
+
+    /* In-Slot Selector Dropdown */
+    .slot-select-picker {
+      width: 100%;
+      background: #0f0e17;
+      color: var(--text);
       border: 1px solid var(--border);
-      padding: 12px;
-      border-radius: 6px;
-      margin-bottom: 10px;
+      border-radius: 4px;
+      padding: 6px 10px;
+      font-size: 0.85rem;
+      margin-top: 6px;
+      cursor: pointer;
     }
-    .card-immediate {
+    .slot-select-picker:focus { outline: none; border-color: var(--accent); }
+
+    /* Upgrade Panel Cards */
+    .upgrade-target-box {
       background: var(--card-highlight);
       border: 2px solid var(--accent);
+      border-radius: 8px;
+      padding: 14px;
+      margin-bottom: 16px;
     }
-    .card-header {
+    .target-banner {
       display: flex;
       justify-content: space-between;
       align-items: center;
-      margin-bottom: 4px;
+      margin-bottom: 8px;
     }
-    .card-badge {
-      font-size: 0.75rem;
+    .target-badge {
       background: var(--accent);
-      color: #fff;
-      padding: 2px 8px;
-      border-radius: 4px;
+      color: white;
+      font-size: 0.75rem;
       font-weight: bold;
+      padding: 3px 8px;
+      border-radius: 4px;
     }
-    .card-title { font-weight: bold; color: #c4b5fd; }
-    .source-text { font-size: 0.8rem; color: var(--muted); }
-    .ep-text { font-size: 0.85rem; margin-top: 6px; }
-    .delta-plus { color: var(--success); font-weight: bold; }
-    
-    button {
+    .target-name { font-size: 1.1rem; font-weight: bold; }
+    .source-info { font-size: 0.85rem; color: var(--muted); margin: 4px 0; }
+    .ep-gain {
+      font-size: 0.95rem;
+      color: var(--success);
+      font-weight: bold;
+      margin-top: 6px;
+    }
+
+    .later-upgrades-list { display: flex; flex-direction: column; gap: 8px; }
+    .later-card {
+      background: var(--card);
+      border: 1px solid var(--border);
+      padding: 10px 14px;
+      border-radius: 6px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    button.btn-primary {
       background: var(--accent);
       border: none;
       color: #fff;
-      padding: 6px 12px;
+      padding: 6px 14px;
       border-radius: 4px;
       font-weight: 600;
       cursor: pointer;
     }
-    button:hover { background: var(--accent-hover); }
-    button.btn-secondary {
-      background: #334155;
-    }
-    button.btn-secondary:hover {
-      background: #475569;
-    }
+    button.btn-primary:hover { background: var(--accent-hover); }
+
     a { color: #c4b5fd; text-decoration: none; font-weight: 500; }
     a:hover { text-decoration: underline; }
 
-    /* Modal Styles */
+    /* Custom Item Modal */
     .modal-overlay {
       position: fixed;
       top: 0; left: 0; right: 0; bottom: 0;
@@ -131,48 +229,19 @@
       border: 1px solid var(--border);
       border-radius: 8px;
       width: 90%;
-      max-width: 600px;
-      max-height: 80vh;
-      display: flex;
-      flex-direction: column;
+      max-width: 500px;
       padding: 20px;
     }
-    .modal-header {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      margin-bottom: 12px;
-    }
-    .modal-header h3 { margin: 0; color: var(--accent); }
-    .search-input {
+    .modal-field { margin-bottom: 12px; }
+    .modal-field label { display: block; font-size: 0.85rem; color: var(--muted); margin-bottom: 4px; }
+    .modal-field input, .modal-field select {
       width: 100%;
-      padding: 10px 14px;
+      padding: 8px 10px;
       background: var(--card);
       border: 1px solid var(--border);
-      border-radius: 6px;
+      border-radius: 4px;
       color: var(--text);
-      font-size: 1rem;
-      margin-bottom: 12px;
     }
-    .search-input:focus { outline: none; border-color: var(--accent); }
-    .modal-list {
-      overflow-y: auto;
-      flex: 1;
-      display: flex;
-      flex-direction: column;
-      gap: 8px;
-    }
-    .modal-item-row {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      background: var(--card);
-      padding: 10px;
-      border-radius: 6px;
-      border: 1px solid var(--border);
-    }
-    .modal-item-info { font-size: 0.9rem; }
-    .modal-item-sub { font-size: 0.75rem; color: var(--muted); }
   </style>
   <script>const whTooltips = { colorLinks: true, iconizeLinks: true, renameLinks: true };</script>
   <script src="https://wow.zamimg.com/js/tooltips.js"></script>
@@ -180,74 +249,488 @@
 <body>
   <div class="container">
     <header>
-      <h1>Shadow Priest Gear Optimizer</h1>
-      <p class="subtitle">WoW Forever Edition • Search items across levels 1–60 • Instant Closest Upgrade Finder</p>
+      <h1>Shadow Priest Gear & Upgrade Advisor</h1>
+      <p class="subtitle">WoW Forever Edition • Select any item to view your next immediate upgrade</p>
+      
+      <!-- Stats Banner -->
       <div id="stat-summary" class="summary-bar"></div>
+
+      <!-- Quick Finder Across All Items -->
+      <div class="quick-search-box">
+        <input 
+          type="text" 
+          id="global-search" 
+          class="quick-search-input" 
+          placeholder="🔍 Fast Search: Type any WoW Forever item name to equip directly..." 
+          oninput="handleGlobalSearch()"
+        >
+        <div id="global-search-results" class="search-results-dropdown"></div>
+      </div>
     </header>
 
     <div class="layout">
-      <!-- Equipped Gear Panel -->
+      <!-- Equipped Gear Roster -->
       <section class="panel">
-        <h2>Equipped Loadout</h2>
+        <div class="panel-header">
+          <h2>Equipped Loadout</h2>
+          <button class="btn-clear" onclick="openCustomModal()">+ Add Custom Item</button>
+        </div>
         <div id="equipment-slots"></div>
       </section>
 
-      <!-- Upgrades Inspection Panel -->
+      <!-- Dynamic Upgrade Panel -->
       <section class="panel">
-        <h2 id="upgrades-title">Upgrade Advisor</h2>
+        <div class="panel-header">
+          <h2 id="upgrades-title">Next Available Upgrade</h2>
+        </div>
         <div id="upgrade-results">
-          <p style="color: var(--muted);">Select or change any slot on the left to see your next closest upgrade.</p>
+          <p style="color: var(--muted);">Select or change any gear slot on the left to inspect its upgrades.</p>
         </div>
       </section>
     </div>
   </div>
 
-  <!-- Item Search Modal -->
-  <div id="search-modal" class="modal-overlay">
+  <!-- Custom Item Modal -->
+  <div id="custom-modal" class="modal-overlay">
     <div class="modal">
-      <div class="modal-header">
-        <h3 id="modal-title">Select Item</h3>
-        <button onclick="closeModal()" class="btn-secondary">✕</button>
+      <h3 style="margin-top:0; color:var(--accent);">Add Custom WoW Forever Item</h3>
+      <div class="modal-field">
+        <label>Item Name</label>
+        <input type="text" id="cust-name" placeholder="e.g. Robe of the Shadow Flayer">
       </div>
-      <input type="text" id="modal-search-box" class="search-input" placeholder="Type to search items by name or source..." oninput="filterModalItems()">
-      <div id="modal-item-list" class="modal-list"></div>
+      <div class="modal-field">
+        <label>Gear Slot</label>
+        <select id="cust-slot">
+          <option value="Head">Head</option>
+          <option value="Neck">Neck</option>
+          <option value="Shoulder">Shoulder</option>
+          <option value="Back">Back</option>
+          <option value="Chest">Chest</option>
+          <option value="Wrist">Wrist</option>
+          <option value="Hands">Hands</option>
+          <option value="Waist">Waist</option>
+          <option value="Legs">Legs</option>
+          <option value="Feet">Feet</option>
+          <option value="Ring">Ring</option>
+          <option value="Trinket">Trinket</option>
+          <option value="MainHand">MainHand / 2H Staff</option>
+          <option value="OffHand">OffHand</option>
+          <option value="Wand">Wand</option>
+        </select>
+      </div>
+      <div class="modal-field">
+        <label>Required Level</label>
+        <input type="number" id="cust-lvl" value="60">
+      </div>
+      <div class="modal-field">
+        <label>Spell Power / Shadow Power</label>
+        <input type="number" id="cust-sp" value="0">
+      </div>
+      <div class="modal-field">
+        <label>Spell Hit %</label>
+        <input type="number" id="cust-hit" value="0">
+      </div>
+      <div class="modal-field">
+        <label>Spell Crit %</label>
+        <input type="number" id="cust-crit" value="0">
+      </div>
+      <div class="modal-field">
+        <label>Intellect</label>
+        <input type="number" id="cust-int" value="0">
+      </div>
+      <div class="modal-field">
+        <label>Source / Drop Location</label>
+        <input type="text" id="cust-src" placeholder="e.g. New Forever Dungeon / World Boss">
+      </div>
+      <div style="display:flex; justify-content:flex-end; gap:8px; margin-top:16px;">
+        <button class="btn-clear" onclick="closeCustomModal()">Cancel</button>
+        <button class="btn-primary" onclick="saveCustomItem()">Save & Equip</button>
+      </div>
     </div>
   </div>
 
   <script>
     const SLOTS = [
-      "Head", "Neck", "Shoulder", "Chest", "Waist", "Legs", 
-      "Feet", "Wrist", "Hands", "Ring1", "Ring2", "Trinket1", "Trinket2", 
-      "MainHand", "OffHand", "Wand"
+      "Head", "Neck", "Shoulder", "Back", "Chest", "Wrist", 
+      "Hands", "Waist", "Legs", "Feet", "Ring1", "Ring2", 
+      "Trinket1", "Trinket2", "MainHand", "OffHand", "Wand"
     ];
 
-    const GEAR_HIT_CAP = 12;
+    const GEAR_HIT_CAP = 12; // 17% raid boss cap minus 5% from Shadow Focus
 
-    // Level 1-60 Shadow Priest Database
-    const ITEMS = [
+    // Comprehensive Level 1-60 Shadow Priest Database
+    let ITEMS = [
       // HEAD
       { id: 10588, name: "Shadow Goggles", slot: "Head", reqLvl: 27, ilvl: 32, source: "Engineering (215)", stats: { sp: 0, hit: 0, crit: 0, int: 5, spi: 6 } },
-      { id: 7720,  name: "Whitemane's Chapeau", slot: "Head", reqLvl: 35, ilvl: 40, source: "Scarlet Monastery (Mograine)", stats: { sp: 0, hit: 0, crit: 0, int: 14, spi: 14 } },
+      { id: 7720,  name: "Whitemane's Chapeau", slot: "Head", reqLvl: 35, ilvl: 40, source: "SM Mograine", stats: { sp: 0, hit: 0, crit: 0, int: 14, spi: 14 } },
       { id: 10041, name: "Dreamweave Circlet", slot: "Head", reqLvl: 45, ilvl: 50, source: "Tailoring (250)", stats: { sp: 21, hit: 0, crit: 0, int: 10, spi: 12 } },
+      { id: 18727, name: "Crimson Felt Hat", slot: "Head", reqLvl: 57, ilvl: 62, source: "Stratholme (Magistrate)", stats: { sp: 30, hit: 0, crit: 0, int: 8, spi: 8 } },
       { id: 14111, name: "Felcloth Hood", slot: "Head", reqLvl: 57, ilvl: 62, source: "Tailoring (300)", stats: { sp: 30, hit: 0, crit: 0, int: 0, spi: 0 } },
       { id: 16923, name: "Halo of Transcendence", slot: "Head", reqLvl: 60, ilvl: 76, source: "Onyxia", stats: { sp: 32, hit: 0, crit: 1, int: 27, spi: 16 } },
       { id: 19375, name: "Mish'undare, Circlet of the Mind Flayer", slot: "Head", reqLvl: 60, ilvl: 83, source: "BWL - Nefarian", stats: { sp: 35, hit: 0, crit: 2, int: 24, spi: 9 } },
 
       // NECK
       { id: 5003,  name: "River Pride Choker", slot: "Neck", reqLvl: 17, ilvl: 22, source: "Wailing Caverns", stats: { sp: 0, hit: 0, crit: 0, int: 2, spi: 4 } },
-      { id: 7686,  name: "Black Pearl Ring / Choker", slot: "Neck", reqLvl: 28, ilvl: 33, source: "Jewelcrafting / World Drop", stats: { sp: 0, hit: 0, crit: 0, int: 5, spi: 5 } },
-      { id: 11943, name: "Ghostshroud", slot: "Neck", reqLvl: 48, ilvl: 53, source: "Blackrock Depths", stats: { sp: 0, hit: 0, crit: 0, int: 11, spi: 11 } },
+      { id: 7686,  name: "Glowing Green Talisman", slot: "Neck", reqLvl: 36, ilvl: 41, source: "SM Library", stats: { sp: 0, hit: 0, crit: 0, int: 7, spi: 7 } },
+      { id: 11943, name: "Ghostshroud", slot: "Neck", reqLvl: 48, ilvl: 53, source: "BRD - Spirestone", stats: { sp: 0, hit: 0, crit: 0, int: 11, spi: 11 } },
+      { id: 13177, name: "Talisman of Ephemeral Power", slot: "Neck", reqLvl: 56, ilvl: 61, source: "Stratholme Postman", stats: { sp: 12, hit: 0, crit: 0, int: 6, spi: 0 } },
       { id: 12103, name: "Star of Mystaria", slot: "Neck", reqLvl: 58, ilvl: 63, source: "Stratholme (Balnazzar)", stats: { sp: 9, hit: 1, crit: 0, int: 9, spi: 0 } },
       { id: 18814, name: "Choker of the Fire Lord", slot: "Neck", reqLvl: 60, ilvl: 77, source: "Molten Core - Ragnaros", stats: { sp: 34, hit: 0, crit: 0, int: 7, spi: 0 } },
 
-      // SHOULDERS
-      { id: 5195,  name: "Gold-flecked Gloves / Mantle", slot: "Shoulder", reqLvl: 14, ilvl: 19, source: "Deadmines", stats: { sp: 0, hit: 0, crit: 0, int: 4, spi: 3 } },
+      // SHOULDER
+      { id: 5195,  name: "Feline Mantle", slot: "Shoulder", reqLvl: 17, ilvl: 22, source: "Shadowfang Keep", stats: { sp: 0, hit: 0, crit: 0, int: 10, spi: 3 } },
       { id: 10042, name: "Dreamweave Mantle", slot: "Shoulder", reqLvl: 40, ilvl: 45, source: "Tailoring (225)", stats: { sp: 18, hit: 0, crit: 0, int: 10, spi: 0 } },
       { id: 14112, name: "Felcloth Shoulders", slot: "Shoulder", reqLvl: 56, ilvl: 61, source: "Tailoring (300)", stats: { sp: 26, hit: 0, crit: 0, int: 0, spi: 0 } },
       { id: 19370, name: "Mantle of the Blackwing Cabal", slot: "Shoulder", reqLvl: 60, ilvl: 77, source: "BWL - Razorgore", stats: { sp: 34, hit: 0, crit: 0, int: 16, spi: 0 } },
 
+      // BACK
+      { id: 5193,  name: "Cape of the Brotherhood", slot: "Back", reqLvl: 19, ilvl: 24, source: "Deadmines (VanCleef)", stats: { sp: 0, hit: 0, crit: 0, int: 6, spi: 3 } },
+      { id: 13122, name: "Spritecaster Cape", slot: "Back", reqLvl: 52, ilvl: 57, source: "BRD - High Interrogator", stats: { sp: 14, hit: 0, crit: 0, int: 4, spi: 0 } },
+      { id: 18389, name: "Amplifying Cloak", slot: "Back", reqLvl: 57, ilvl: 62, source: "Dire Maul West", stats: { sp: 18, hit: 0, crit: 0, int: 0, spi: 0 } },
+      { id: 19378, name: "Cloak of the Brood Lord", slot: "Back", reqLvl: 60, ilvl: 77, source: "BWL - Nefarian", stats: { sp: 28, hit: 0, crit: 0, int: 14, spi: 0 } },
+
       // CHEST
-      { id: 2041,  name: "Tunic of Westfall", slot: "Chest", reqLvl: 14, ilvl: 19, source: "Quest - The Defias Brotherhood", stats: { sp: 0, hit: 0, crit: 0, int: 5, spi: 5 } },
+      { id: 2041,  name: "Tunic of Westfall", slot: "Chest", reqLvl: 14, ilvl: 19, source: "Quest - Defias Brotherhood", stats: { sp: 0, hit: 0, crit: 0, int: 5, spi: 5 } },
       { id: 6341,  name: "Robes of Arugal", slot: "Chest", reqLvl: 24, ilvl: 29, source: "Shadowfang Keep (Arugal)", stats: { sp: 0, hit: 0, crit: 0, int: 10, spi: 9 } },
       { id: 10044, name: "Dreamweave Vest", slot: "Chest", reqLvl: 40, ilvl: 45, source: "Tailoring (225)", stats: { sp: 18, hit: 0, crit: 0, int: 9, spi: 14 } },
-      { id: 14136, name: "Robe of Winter Night", slot: "Chest", reqLvl: 52, ilvl: 57, source: "Tailoring (285)", stats: { sp: 27, hit: 0, crit: 1, int: 12, spi: 0 }
+      { id: 14136, name: "Robe of Winter Night", slot: "Chest", reqLvl: 52, ilvl: 57, source: "Tailoring (285)", stats: { sp: 27, hit: 0, crit: 1, int: 12, spi: 0 } },
+      { id: 19682, name: "Bloodvine Vest", slot: "Chest", reqLvl: 60, ilvl: 65, source: "Tailoring (300)", stats: { sp: 27, hit: 2, crit: 0, int: 13, spi: 0 } },
+      { id: 16928, name: "Robes of Transcendence", slot: "Chest", reqLvl: 60, ilvl: 76, source: "BWL - Nefarian", stats: { sp: 32, hit: 0, crit: 1, int: 27, spi: 17 } },
+
+      // WRIST
+      { id: 3647,  name: "Bright Bracers", slot: "Wrist", reqLvl: 18, ilvl: 23, source: "World Drop", stats: { sp: 0, hit: 0, crit: 0, int: 4, spi: 4 } },
+      { id: 13260, name: "Sublime Wristguards", slot: "Wrist", reqLvl: 55, ilvl: 60, source: "Dire Maul North", stats: { sp: 12, hit: 0, crit: 0, int: 10, spi: 6 } },
+      { id: 19374, name: "Bracers of Arcane Focus", slot: "Wrist", reqLvl: 60, ilvl: 77, source: "BWL - Ebonroc", stats: { sp: 25, hit: 1, crit: 0, int: 8, spi: 0 } },
+
+      // HANDS
+      { id: 3068,  name: "Magefist Gloves", slot: "Hands", reqLvl: 19, ilvl: 24, source: "World Drop", stats: { sp: 0, hit: 0, crit: 0, int: 4, spi: 5 } },
+      { id: 10041, name: "Dreamweave Gloves", slot: "Hands", reqLvl: 40, ilvl: 45, source: "Tailoring (225)", stats: { sp: 18, hit: 0, crit: 0, int: 4, spi: 7 } },
+      { id: 14113, name: "Felcloth Gloves", slot: "Hands", reqLvl: 57, ilvl: 62, source: "Tailoring (300)", stats: { sp: 33, hit: 0, crit: 0, int: 0, spi: 0 } },
+      { id: 19385, name: "Ebony Flame Gloves", slot: "Hands", reqLvl: 60, ilvl: 77, source: "BWL - Ebonroc", stats: { sp: 43, hit: 0, crit: 0, int: 9, spi: 0 } },
+
+      // WAIST
+      { id: 13098, name: "Girdle of the Blindwatcher", slot: "Waist", reqLvl: 38, ilvl: 43, source: "World Drop", stats: { sp: 0, hit: 0, crit: 0, int: 11, spi: 10 } },
+      { id: 13956, name: "Ban'thok Sash", slot: "Waist", reqLvl: 49, ilvl: 54, source: "BRD - Ok'thor the Breaker", stats: { sp: 11, hit: 1, crit: 0, int: 10, spi: 0 } },
+      { id: 19136, name: "Mana Igniting Cord", slot: "Waist", reqLvl: 60, ilvl: 71, source: "Molten Core - Magmadar", stats: { sp: 25, hit: 0, crit: 1, int: 16, spi: 0 } },
+      { id: 19388, name: "Angelista's Grasp", slot: "Waist", reqLvl: 60, ilvl: 77, source: "BWL - Trash Drop", stats: { sp: 0, hit: 2, crit: 0, int: 20, spi: 13 } },
+
+      // LEGS
+      { id: 2043,  name: "Chausses of Westfall", slot: "Legs", reqLvl: 14, ilvl: 19, source: "Quest - Defias Brotherhood", stats: { sp: 0, hit: 0, crit: 0, int: 4, spi: 5 } },
+      { id: 9484,  name: "Spellshock Leggings", slot: "Legs", reqLvl: 43, ilvl: 48, source: "Zul'Farrak (Antu'sul)", stats: { sp: 0, hit: 0, crit: 0, int: 16, spi: 16 } },
+      { id: 19683, name: "Bloodvine Leggings", slot: "Legs", reqLvl: 60, ilvl: 65, source: "Tailoring (300)", stats: { sp: 19, hit: 1, crit: 0, int: 6, spi: 0 } },
+
+      // FEET
+      { id: 4320,  name: "Spidersilk Boots", slot: "Feet", reqLvl: 20, ilvl: 25, source: "Tailoring (125)", stats: { sp: 0, hit: 0, crit: 0, int: 4, spi: 7 } },
+      { id: 9454,  name: "Acidic Walkers", slot: "Feet", reqLvl: 30, ilvl: 35, source: "Gnomeregan", stats: { sp: 0, hit: 0, crit: 0, int: 9, spi: 5 } },
+      { id: 13396, name: "Omnicast Boots", slot: "Feet", reqLvl: 54, ilvl: 59, source: "BRD - Argelmach", stats: { sp: 11, hit: 0, crit: 0, int: 9, spi: 9 } },
+      { id: 19684, name: "Bloodvine Boots", slot: "Feet", reqLvl: 60, ilvl: 65, source: "Tailoring (300)", stats: { sp: 19, hit: 1, crit: 0, int: 0, spi: 0 } },
+
+      // RINGS
+      { id: 1156,  name: "Lavishly Jeweled Ring", slot: "Ring", reqLvl: 17, ilvl: 22, source: "Deadmines", stats: { sp: 0, hit: 0, crit: 0, int: 6, spi: 0 } },
+      { id: 13001, name: "Maiden's Circle", slot: "Ring", reqLvl: 39, ilvl: 44, source: "World Drop", stats: { sp: 7, hit: 0, crit: 0, int: 7, spi: 7 } },
+      { id: 19147, name: "Ring of Spell Power", slot: "Ring", reqLvl: 60, ilvl: 66, source: "Molten Core", stats: { sp: 33, hit: 0, crit: 0, int: 0, spi: 0 } },
+      { id: 19400, name: "Band of Forced Concentration", slot: "Ring", reqLvl: 60, ilvl: 75, source: "BWL - Ebonroc", stats: { sp: 21, hit: 1, crit: 0, int: 8, spi: 0 } },
+
+      // TRINKETS
+      { id: 4381,  name: "Minor Recombobulator", slot: "Trinket", reqLvl: 15, ilvl: 20, source: "Engineering (140)", stats: { sp: 0, hit: 0, crit: 0, int: 4, spi: 0 } },
+      { id: 12930, name: "Briarwood Reed", slot: "Trinket", reqLvl: 55, ilvl: 60, source: "UBRS - Jed Runewatcher", stats: { sp: 29, hit: 0, crit: 0, int: 0, spi: 0 } },
+      { id: 19379, name: "Neltharion's Tear", slot: "Trinket", reqLvl: 60, ilvl: 83, source: "BWL - Nefarian", stats: { sp: 44, hit: 2, crit: 0, int: 0, spi: 0 } },
+
+      // MAIN HAND / 2H
+      { id: 2042,  name: "Staff of Westfall", slot: "MainHand", reqLvl: 14, ilvl: 19, source: "Quest - Defias Brotherhood", stats: { sp: 0, hit: 0, crit: 0, int: 5, spi: 11 } },
+      { id: 7713,  name: "Illusionary Rod", slot: "MainHand", reqLvl: 34, ilvl: 39, source: "SM Library (Doan)", stats: { sp: 0, hit: 0, crit: 0, int: 15, spi: 10 } },
+      { id: 6802,  name: "Hypnotic Blade", slot: "MainHand", reqLvl: 34, ilvl: 39, source: "SM Library (Doan)", stats: { sp: 9, hit: 0, crit: 0, int: 8, spi: 3 } },
+      { id: 10844, name: "Zum'rah's Vexing Cane", slot: "MainHand", reqLvl: 44, ilvl: 49, source: "Zul'Farrak (Zum'rah)", stats: { sp: 21, hit: 0, crit: 0, int: 10, spi: 0 } },
+      { id: 18842, name: "Staff of Dominance", slot: "MainHand", reqLvl: 60, ilvl: 66, source: "Molten Core - Golemagg", stats: { sp: 40, hit: 0, crit: 1, int: 16, spi: 14 } },
+      { id: 19355, name: "Shadow Flame", slot: "MainHand", reqLvl: 60, ilvl: 83, source: "BWL - Nefarian", stats: { sp: 84, hit: 0, crit: 2, int: 0, spi: 0 } },
+
+      // OFF HAND
+      { id: 7685,  name: "Orb of the Forgotten Seer", slot: "OffHand", reqLvl: 33, ilvl: 38, source: "SM Graveyard", stats: { sp: 0, hit: 0, crit: 0, int: 5, spi: 12 } },
+      { id: 11904, name: "Spirit of Aquementas", slot: "OffHand", reqLvl: 52, ilvl: 57, source: "Quest - Linken's Adventure", stats: { sp: 20, hit: 0, crit: 0, int: 0, spi: 0 } },
+
+      // WAND
+      { id: 11288, name: "Greater Magic Wand", slot: "Wand", reqLvl: 13, ilvl: 18, source: "Enchanting (75)", stats: { sp: 0, hit: 0, crit: 0, int: 1, spi: 1 } },
+      { id: 7001,  name: "Gravestone Scepter", slot: "Wand", reqLvl: 18, ilvl: 24, source: "Quest - Blackfathom Villainy", stats: { sp: 0, hit: 0, crit: 0, int: 5, spi: 0 } },
+      { id: 13064, name: "Blackbone Wand", slot: "Wand", reqLvl: 41, ilvl: 46, source: "World / Vendor", stats: { sp: 11, hit: 0, crit: 0, int: 0, spi: 0 } },
+      { id: 19130, name: "Cold Snap", slot: "Wand", reqLvl: 60, ilvl: 66, source: "Azuregos", stats: { sp: 7, hit: 1, crit: 0, int: 7, spi: 0 } }
+    ];
+
+    // Load any saved custom items
+    const customSaved = JSON.parse(localStorage.getItem("spriest_custom_items") || "[]");
+    ITEMS = [...ITEMS, ...customSaved];
+
+    let equipped = JSON.parse(localStorage.getItem("spriest_gear_v3")) || {
+      "Head": 7720,
+      "Chest": 6341,
+      "MainHand": 2042,
+      "Wand": 7001
+    };
+
+    let activeSelectedSlot = "Head";
+
+    function computeStats() {
+      let sp = 0, hit = 0, crit = 0, int = 0, spi = 0;
+      Object.values(equipped).forEach(id => {
+        const item = ITEMS.find(i => i.id === id);
+        if (item && item.stats) {
+          sp += item.stats.sp || 0;
+          hit += item.stats.hit || 0;
+          crit += item.stats.crit || 0;
+          int += item.stats.int || 0;
+          spi += item.stats.spi || 0;
+        }
+      });
+      return { sp, hit, crit, int, spi };
+    }
+
+    // Shadow Priest EP formula with leveling Int & Spirit utility
+    function calculateEP(item, currentTotalHit, equippedItemHit = 0) {
+      if (!item || !item.stats) return 0;
+      const otherHit = currentTotalHit - equippedItemHit;
+      const effectiveHit = Math.max(0, Math.min(item.stats.hit || 0, GEAR_HIT_CAP - otherHit));
+      
+      return (
+        ((item.stats.sp || 0) * 1.0) +
+        (effectiveHit * 1.15) +
+        ((item.stats.crit || 0) * 0.85) +
+        ((item.stats.int || 0) * 0.25) +
+        ((item.stats.spi || 0) * 0.20)
+      );
+    }
+
+    function render() {
+      const stats = computeStats();
+      const hitColor = stats.hit >= GEAR_HIT_CAP ? "var(--success)" : "var(--warning)";
+      document.getElementById("stat-summary").innerHTML = `
+        <div class="badge">Spell Power: <strong>+${stats.sp}</strong></div>
+        <div class="badge" style="color: ${hitColor}">Hit: <strong>${stats.hit}% / ${GEAR_HIT_CAP}%</strong> ${stats.hit >= GEAR_HIT_CAP ? '(Capped)' : `(Need +${GEAR_HIT_CAP - stats.hit}%)`}</div>
+        <div class="badge">Crit: <strong>+${stats.crit}%</strong></div>
+        <div class="badge">Intellect: <strong>${stats.int}</strong></div>
+        <div class="badge">Spirit: <strong>${stats.spi}</strong></div>
+      `;
+
+      const container = document.getElementById("equipment-slots");
+      container.innerHTML = "";
+
+      SLOTS.forEach(slot => {
+        const baseSlot = slot.replace(/[0-9]/g, "");
+        const itemId = equipped[slot];
+        const currentItem = ITEMS.find(i => i.id === itemId);
+        const currentItemHit = currentItem?.stats?.hit || 0;
+        const ep = currentItem ? calculateEP(currentItem, stats.hit, currentItemHit).toFixed(1) : 0;
+        const isActive = slot === activeSelectedSlot;
+
+        // Available items for this slot dropdown
+        const slotItems = ITEMS
+          .filter(i => i.slot === baseSlot)
+          .sort((a, b) => (a.reqLvl || 1) - (b.reqLvl || 1));
+
+        const card = document.createElement("div");
+        card.className = `slot-card ${isActive ? 'active-slot' : ''}`;
+        card.onclick = (e) => {
+          if (e.target.tagName !== "SELECT" && e.target.tagName !== "BUTTON" && e.target.tagName !== "A") {
+            selectSlot(slot);
+          }
+        };
+
+        let optionsHtml = `<option value="">— Select gear to equip in this slot —</option>`;
+        slotItems.forEach(i => {
+          const selected = i.id === itemId ? "selected" : "";
+          optionsHtml += `<option value="${i.id}" ${selected}>[Lvl ${i.reqLvl || 1}] ${i.name} (${i.source})</option>`;
+        });
+
+        card.innerHTML = `
+          <div class="slot-card-top">
+            <span class="slot-badge-name">${slot}</span>
+            ${currentItem ? `<button class="btn-clear" onclick="clearSlot('${slot}', event)">✕ Unequip</button>` : ''}
+          </div>
+          <div class="equipped-details">
+            ${currentItem 
+              ? `<a href="https://www.wowhead.com/classic/item=${currentItem.id}" data-wowhead="item=${currentItem.id}">${currentItem.name}</a>
+                 <span class="ep-tag">${ep} EP</span>` 
+              : `<span style="color:var(--muted); font-style:italic;">Nothing Equipped</span>`}
+          </div>
+          <select class="slot-select-picker" onchange="equipSlotFromSelect('${slot}', this.value)">
+            ${optionsHtml}
+          </select>
+        `;
+
+        container.appendChild(card);
+      });
+
+      if (window.$WowheadPower) window.$WowheadPower.refreshLinks();
+      renderUpgradeAdvisor();
+    }
+
+    function selectSlot(slot) {
+      activeSelectedSlot = slot;
+      render();
+    }
+
+    function equipSlotFromSelect(slot, itemIdStr) {
+      activeSelectedSlot = slot;
+      if (!itemIdStr) {
+        delete equipped[slot];
+      } else {
+        equipped[slot] = isNaN(itemIdStr) ? itemIdStr : parseInt(itemIdStr);
+      }
+      saveEquipped();
+      render();
+    }
+
+    function clearSlot(slot, e) {
+      if (e) e.stopPropagation();
+      delete equipped[slot];
+      activeSelectedSlot = slot;
+      saveEquipped();
+      render();
+    }
+
+    function saveEquipped() {
+      localStorage.setItem("spriest_gear_v3", JSON.stringify(equipped));
+    }
+
+    // Dynamic Upgrade Advisor logic
+    function renderUpgradeAdvisor() {
+      const slot = activeSelectedSlot;
+      const baseSlot = slot.replace(/[0-9]/g, "");
+      const stats = computeStats();
+      const currentItem = ITEMS.find(i => i.id === equipped[slot]);
+      const currentItemHit = currentItem ? (currentItem.stats?.hit || 0) : 0;
+      const currentEP = currentItem ? calculateEP(currentItem, stats.hit, currentItemHit) : 0;
+
+      document.getElementById("upgrades-title").innerText = `Upgrade Advisor: ${slot}`;
+      const list = document.getElementById("upgrade-results");
+      list.innerHTML = "";
+
+      const upgrades = ITEMS
+        .filter(i => i.slot === baseSlot && i.id !== (currentItem ? currentItem.id : null))
+        .map(i => {
+          const ep = calculateEP(i, stats.hit, currentItemHit);
+          return { ...i, ep, delta: ep - currentEP };
+        })
+        .filter(i => i.delta > 0)
+        .sort((a, b) => a.delta - b.delta); // Closest upgrade first
+
+      if (upgrades.length === 0) {
+        list.innerHTML = `
+          <div style="padding: 16px; background: var(--card); border-radius: 6px;">
+            <p style="margin: 0; color: var(--muted);">
+              ${currentItem ? `You currently have <strong>${currentItem.name}</strong> equipped. No higher power upgrades exist in the database for this slot!` : 'No item equipped. Select an item from the left to view upgrades.'}
+            </p>
+          </div>
+        `;
+        return;
+      }
+
+      // 1. Closest next upgrade
+      const immediate = upgrades[0];
+      const immediateBox = document.createElement("div");
+      immediateBox.className = "upgrade-target-box";
+      immediateBox.innerHTML = `
+        <div class="target-banner">
+          <span class="target-badge">🎯 NEXT CLOSEST UPGRADE</span>
+          <button class="btn-primary" onclick="equipSlotFromSelect('${slot}', ${immediate.id})">Equip This</button>
+        </div>
+        <div class="target-name">
+          <a href="https://www.wowhead.com/classic/item=${immediate.id}" data-wowhead="item=${immediate.id}">${immediate.name}</a>
+        </div>
+        <div class="source-info">Requires Level: ${immediate.reqLvl || 1} • Source: ${immediate.source}</div>
+        <div class="ep-gain">Power Gain: +${immediate.delta.toFixed(1)} EP (${immediate.ep.toFixed(1)} total EP)</div>
+      `;
+      list.appendChild(immediateBox);
+
+      // 2. Later upgrades in progression
+      if (upgrades.length > 1) {
+        const title = document.createElement("h4");
+        title.style.color = "var(--muted)";
+        title.style.margin = "16px 0 8px 0";
+        title.innerText = "Later Progression Upgrades:";
+        list.appendChild(title);
+
+        const laterContainer = document.createElement("div");
+        laterContainer.className = "later-upgrades-list";
+
+        upgrades.slice(1).forEach(u => {
+          const row = document.createElement("div");
+          row.className = "later-card";
+          row.innerHTML = `
+            <div>
+              <div><a href="https://www.wowhead.com/classic/item=${u.id}" data-wowhead="item=${u.id}">${u.name}</a></div>
+              <div class="source-info">Lvl ${u.reqLvl || 1} • ${u.source}</div>
+              <div style="font-size:0.85rem; color:var(--success);">+${u.delta.toFixed(1)} EP gain</div>
+            </div>
+            <button class="btn-primary" style="font-size:0.8rem; padding:4px 10px;" onclick="equipSlotFromSelect('${slot}', ${u.id})">Equip</button>
+          `;
+          laterContainer.appendChild(row);
+        });
+
+        list.appendChild(laterContainer);
+      }
+
+      if (window.$WowheadPower) window.$WowheadPower.refreshLinks();
+    }
+
+    // Universal Quick Search Bar
+    function handleGlobalSearch() {
+      const q = document.getElementById("global-search").value.toLowerCase().trim();
+      const resultsBox = document.getElementById("global-search-results");
+
+      if (!q) {
+        resultsBox.style.display = "none";
+        return;
+      }
+
+      const matches = ITEMS.filter(i => 
+        i.name.toLowerCase().includes(q) || i.source.toLowerCase().includes(q)
+      ).slice(0, 8);
+
+      if (matches.length === 0) {
+        resultsBox.innerHTML = `<div style="padding:10px; color:var(--muted); text-align:center;">No matching items found</div>`;
+        resultsBox.style.display = "block";
+        return;
+      }
+
+      resultsBox.innerHTML = "";
+      matches.forEach(item => {
+        const row = document.createElement("div");
+        row.className = "search-result-row";
+        row.innerHTML = `
+          <span><strong>${item.name}</strong> <span style="font-size:0.8rem; color:var(--muted);">(${item.slot} - Lvl ${item.reqLvl || 1})</span></span>
+          <span style="color:var(--accent); font-size:0.85rem;">Equip ➔</span>
+        `;
+        row.onclick = () => {
+          let targetSlot = item.slot;
+          if (item.slot === "Ring") targetSlot = "Ring1";
+          if (item.slot === "Trinket") targetSlot = "Trinket1";
+          
+          equipSlotFromSelect(targetSlot, item.id);
+          document.getElementById("global-search").value = "";
+          resultsBox.style.display = "none";
+        };
+        resultsBox.appendChild(row);
+      });
+      resultsBox.style.display = "block";
+    }
+
+    // Custom Item Modal Handlers
+    function openCustomModal() {
+      document.getElementById("custom-modal").style.display = "flex";
+    }
+    function closeCustomModal() {
+      document.getElementById("custom-modal").style.display = "none";
+    }
+    function saveCustomItem() {
+      const name = document.getElementById("cust-name").value.trim();
+      if (!name) return alert("Please enter an item name!");
+
+      const slot = document.getElementById("cust-slot").value;
+      const customItem = {
+        id: "custom_" + Date.now(),
+        name: name,
+        slot: slot,
+        reqLvl: parseInt(document.getElementById("cust-lvl").value) || 1,
+        source: document.getElementById("cust-src").value.trim() || "Custom / Forever Exclusive",
+        stats: {
+          sp: parseFloat(document.getElementById("cust-sp").value) || 0,
+          hit: parseFloat(document.getElementById("cust-hit").value) || 0,
